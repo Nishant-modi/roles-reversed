@@ -7,24 +7,28 @@ public class CharacterController : MonoBehaviour
     public float speed;
     private float Move;
     public float jumpSpeed;
+    public float maxSpeed = 2;
 
 
     public bool jumpCheck;
     public bool dashCheck;
 
     public GameObject lostPanel;
-    private Rigidbody2D rb;
+    public Rigidbody2D rb;
 
     private bool obstacle;
     public bool isJumping;
     private bool isStopped;
 
+    IEnumerator temp;
+
     void Start()
     {
-        rb = GetComponent<Rigidbody2D>();
+        //rb = GetComponent<Rigidbody2D>();
         isJumping = true;
         obstacle = false;
-        StartCoroutine(stoppedCheck());
+        temp = stoppedCheck();
+        StartCoroutine(temp);
     }
 
     // Update is called once per frame
@@ -34,34 +38,50 @@ public class CharacterController : MonoBehaviour
             int rbPos = (int)rb.gravityScale;
             Move = 1f;
 
-            rb.velocity = new Vector2(speed * Move, rb.velocity.y);
+            //rb.velocity = new Vector2(speed * Move, rb.velocity.y);
+
+            rb.AddForce(new Vector2 (speed*Move, rb.velocity.y));
             if (jumpCheck && !isJumping && obstacle)
             {
                 rb.AddForce(new Vector2(rb.velocity.x, jumpSpeed * rbPos));
             }
 
-            
+        if(rb.velocity.magnitude > maxSpeed)
+        {
+            rb.velocity = new Vector2(Mathf.Clamp(rb.velocity.x, 0, maxSpeed),rb.velocity.y);
+        }
+
+        
     }
 
     IEnumerator stoppedCheck()
     {
-        if (rb.velocity.x > 0)
+        bool flag = true;
+        while(flag)
         {
-            isStopped = true;
-            Debug.Log("moving");
+            if (rb.velocity.magnitude > 0)
+            {
+                Lost(false);
+            }
+            else
+            {
+                for(int i=0; i<3;i++)
+                yield return new WaitForSeconds(1f);
+                flag = false;
+                Lost(true);
+
+            }
+            yield return null;
         }
-        else
-        {
-            isStopped = false;
-            Debug.Log("stopped");
-        }
-        yield return null;
+
+        
     }
 
-    void Lost()
+    void Lost(bool t)
     {
-        lostPanel.SetActive(true);
-        StopAllCoroutines();
+        Physics2D.autoSimulation = false;
+        lostPanel.SetActive(t);
+        //StopAllCoroutines();
     }
 
     private void OnCollisionEnter2D(Collision2D other)
@@ -72,7 +92,7 @@ public class CharacterController : MonoBehaviour
         }
         if (other.gameObject.CompareTag("Spikes"))
         {
-            Lost();
+            Lost(true);
         }
 
     }
